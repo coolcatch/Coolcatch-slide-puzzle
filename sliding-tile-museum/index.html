@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Museum Tile Puzzle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- SPLASH / HOME SCREEN -->
+  <div id="screen-home" class="screen active">
+    <div class="home-container">
+      <div class="home-header">
+        <h1 class="logo-title">Museum<span class="logo-accent">Tiles</span></h1>
+        <p class="tagline">Slide. Solve. Discover great art.</p>
+      </div>
+
+      <div class="home-card featured-card" id="featured-card">
+        <div class="featured-card-inner">
+          <!-- Front: artwork -->
+          <div class="featured-card-front">
+            <div class="featured-img-wrap">
+              <img id="featured-img" src="" alt="Featured artwork">
+            </div>
+            <div class="featured-meta">
+              <span class="featured-label">Today's Masterpiece</span>
+              <h2 id="featured-title" class="featured-name"></h2>
+              <p id="featured-artist" class="featured-artist-name"></p>
+            </div>
+            <button class="info-btn" id="btn-flip-featured" aria-label="Show artwork info">i</button>
+          </div>
+          <!-- Back: info -->
+          <div class="featured-card-back">
+            <button class="info-btn back-btn" id="btn-unflip-featured" aria-label="Show artwork">&#x2190;</button>
+            <h2 id="back-title" class="back-title"></h2>
+            <p id="back-artist" class="back-artist"></p>
+            <p id="back-year" class="back-year"></p>
+            <p id="back-museum" class="back-museum"></p>
+            <div class="back-divider"></div>
+            <p id="back-description" class="back-description"></p>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-play-today">Play Today's Puzzle</button>
+
+      <div class="home-nav">
+        <button class="nav-pill" id="btn-go-gallery">Browse Past Puzzles</button>
+        <button class="nav-pill" id="btn-go-tours">Guided Tours</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GALLERY SCREEN -->
+  <div id="screen-gallery" class="screen">
+    <div class="screen-inner">
+      <header class="screen-header">
+        <button class="back-arrow" id="btn-gallery-back">&larr;</button>
+        <h2>Gallery</h2>
+      </header>
+      <div class="gallery-grid" id="gallery-grid"></div>
+    </div>
+  </div>
+
+  <!-- TOURS SCREEN -->
+  <div id="screen-tours" class="screen">
+    <div class="screen-inner">
+      <header class="screen-header">
+        <button class="back-arrow" id="btn-tours-back">&larr;</button>
+        <h2>Guided Tours</h2>
+      </header>
+      <div class="tours-list" id="tours-list"></div>
+    </div>
+  </div>
+
+  <!-- TOUR DETAIL SCREEN -->
+  <div id="screen-tour-detail" class="screen">
+    <div class="screen-inner">
+      <header class="screen-header">
+        <button class="back-arrow" id="btn-tour-detail-back">&larr;</button>
+        <h2 id="tour-detail-title"></h2>
+      </header>
+      <p id="tour-detail-desc" class="tour-desc"></p>
+      <div class="gallery-grid" id="tour-detail-grid"></div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game" class="screen">
+    <div class="game-container">
+      <header class="game-header">
+        <button class="back-arrow" id="btn-game-back">&larr;</button>
+        <div class="game-title-block">
+          <h2 id="game-art-title" class="game-art-title"></h2>
+          <p id="game-art-artist" class="game-art-artist"></p>
+        </div>
+        <button class="info-btn game-info-btn" id="btn-game-info">i</button>
+      </header>
+
+      <div class="game-area">
+        <!-- Reference thumbnail -->
+        <div class="reference-wrap">
+          <img id="game-reference" src="" alt="Reference image" class="reference-img">
+          <span class="reference-label">Reference</span>
+        </div>
+
+        <!-- Puzzle board -->
+        <div class="puzzle-board" id="puzzle-board"></div>
+      </div>
+
+      <div class="game-stats">
+        <div class="stat"><span class="stat-label">Moves</span><span class="stat-value" id="stat-moves">0</span></div>
+        <div class="stat"><span class="stat-label">Time</span><span class="stat-value" id="stat-time">0:00</span></div>
+      </div>
+
+      <div class="game-controls">
+        <button class="btn-secondary" id="btn-shuffle">Shuffle</button>
+      </div>
+    </div>
+
+    <!-- Info overlay -->
+    <div class="info-overlay hidden" id="info-overlay">
+      <div class="info-panel">
+        <button class="info-close" id="btn-close-info">&times;</button>
+        <h2 id="info-title"></h2>
+        <p id="info-artist" class="info-artist"></p>
+        <p id="info-year" class="info-year"></p>
+        <p id="info-museum" class="info-museum"></p>
+        <div class="back-divider"></div>
+        <p id="info-description" class="info-desc"></p>
+      </div>
+    </div>
+
+    <!-- Win overlay -->
+    <div class="win-overlay hidden" id="win-overlay">
+      <div class="win-panel">
+        <h2 class="win-title">Masterpiece Complete!</h2>
+        <img id="win-img" src="" alt="Completed artwork" class="win-img">
+        <p id="win-stats" class="win-stats"></p>
+        <p id="win-art-info" class="win-art-info"></p>
+        <div class="win-actions">
+          <button class="btn-primary" id="btn-win-next">Next Puzzle</button>
+          <button class="btn-secondary" id="btn-win-home">Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="artworks.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
