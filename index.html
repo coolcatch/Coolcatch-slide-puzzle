@@ -155,7 +155,7 @@ body {
 }
 .puzzle-tile {
   border-radius: 4px; overflow: hidden; cursor: pointer;
-  transition: transform 0.15s ease; background-size: 400% 400%; background-repeat: no-repeat;
+  transition: transform 0.15s ease; background-repeat: no-repeat;
 }
 .puzzle-tile:hover { transform: scale(0.96); }
 .puzzle-tile.empty { background: transparent !important; cursor: default; }
@@ -488,10 +488,24 @@ const TOURS = [
   function shuffleTiles() { do { tiles=solvedState(); for(let i=tiles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [tiles[i],tiles[j]]=[tiles[j],tiles[i]]; } } while(!isSolvable(tiles)||isSolved()); }
   function renderBoard() {
     const board=$("#puzzle-board"); board.innerHTML="";
+    const boardSize=board.offsetWidth||400;
+    const tileSize=boardSize/GRID;
+    const imgW=currentArtwork._natW||1,imgH=currentArtwork._natH||1;
+    const imgRatio=imgW/imgH;
+    // "Cover" math: scale image to fill square board, crop overflow
+    let bgW,bgH,offX,offY;
+    if(imgRatio>=1){bgH=boardSize;bgW=boardSize*imgRatio;offX=(bgW-boardSize)/2;offY=0;}
+    else{bgW=boardSize;bgH=boardSize/imgRatio;offX=0;offY=(bgH-boardSize)/2;}
     tiles.forEach((tileNum,idx) => {
       const div=document.createElement("div");
       div.className="puzzle-tile"+(tileNum===0?" empty":"");
-      if(tileNum!==0){ const srcRow=Math.floor((tileNum-1)/GRID),srcCol=(tileNum-1)%GRID; div.style.backgroundImage="url('"+currentArtwork.image+"')"; div.style.backgroundPosition=(srcCol/(GRID-1))*100+"% "+(srcRow/(GRID-1))*100+"%"; div.onclick=()=>handleTileClick(idx); }
+      if(tileNum!==0){
+        const srcRow=Math.floor((tileNum-1)/GRID),srcCol=(tileNum-1)%GRID;
+        div.style.backgroundImage="url('"+currentArtwork.image+"')";
+        div.style.backgroundSize=bgW+"px "+bgH+"px";
+        div.style.backgroundPosition=-(offX+srcCol*tileSize)+"px "+-(offY+srcRow*tileSize)+"px";
+        div.onclick=()=>handleTileClick(idx);
+      }
       board.appendChild(div);
     });
   }
@@ -512,7 +526,18 @@ const TOURS = [
     moves=0; $("#stat-moves").textContent="0";
     $("#win-overlay").classList.add("hidden");
     $("#info-overlay").classList.add("hidden");
-    shuffleTiles(); renderBoard(); gameActive=true; startTimer(); showScreen(screenGame);
+    showScreen(screenGame);
+    // Preload image to get natural dimensions for correct tile cropping
+    const img=new Image();
+    img.onload=function(){
+      artwork._natW=this.naturalWidth; artwork._natH=this.naturalHeight;
+      shuffleTiles(); renderBoard(); gameActive=true; startTimer();
+    };
+    img.onerror=function(){
+      artwork._natW=1; artwork._natH=1;
+      shuffleTiles(); renderBoard(); gameActive=true; startTimer();
+    };
+    img.src=artwork.image;
   }
   function onWin() {
     gameActive=false; stopTimer();
