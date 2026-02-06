@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Museum Tile Puzzle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f0f0f;
+  --bg-card: #1a1a1a;
+  --bg-card-hover: #222;
+  --surface: #252525;
+  --text: #f0ece4;
+  --text-muted: #9a9590;
+  --accent: #c9a84c;
+  --accent-hover: #ddbf60;
+  --border: #333;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --transition: 0.3s ease;
+}
+html { font-size: 16px; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.screen { display: none; min-height: 100dvh; }
+.screen.active { display: flex; }
+.home-container {
+  width: 100%; max-width: 480px; margin: 0 auto; padding: 40px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 28px;
+}
+.home-header { text-align: center; }
+.logo-title { font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; }
+.logo-accent { color: var(--accent); }
+.tagline { color: var(--text-muted); font-size: 0.95rem; margin-top: 6px; font-weight: 300; }
+.home-card { width: 100%; perspective: 1200px; }
+.featured-card-inner { position: relative; width: 100%; transition: transform 0.6s ease; transform-style: preserve-3d; }
+.home-card.flipped .featured-card-inner { transform: rotateY(180deg); }
+.featured-card-front, .featured-card-back {
+  backface-visibility: hidden; border-radius: var(--radius); overflow: hidden;
+  background: var(--bg-card); border: 1px solid var(--border);
+}
+.featured-card-front { position: relative; }
+.featured-card-back {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  transform: rotateY(180deg); padding: 28px 24px;
+  display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
+}
+.featured-img-wrap { width: 100%; aspect-ratio: 1; overflow: hidden; }
+.featured-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.featured-meta { padding: 16px 20px; }
+.featured-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); font-weight: 600; }
+.featured-name { font-family: var(--font-display); font-size: 1.3rem; margin-top: 4px; }
+.featured-artist-name { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
+.info-btn {
+  position: absolute; bottom: 16px; right: 16px; width: 36px; height: 36px;
+  border-radius: 50%; border: 1.5px solid var(--accent); background: rgba(0,0,0,0.6);
+  color: var(--accent); font-family: var(--font-display); font-style: italic;
+  font-size: 1rem; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: background var(--transition); z-index: 2;
+}
+.info-btn:hover { background: rgba(201,168,76,0.2); }
+.back-btn { position: absolute; top: 16px; left: 16px; bottom: auto; right: auto; font-style: normal; }
+.back-title { font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 6px; }
+.back-artist { color: var(--accent); font-size: 0.9rem; }
+.back-year { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+.back-museum { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; font-style: italic; }
+.back-divider { width: 40px; height: 2px; background: var(--accent); margin: 16px 0; border-radius: 1px; }
+.back-description { font-size: 0.88rem; line-height: 1.65; color: var(--text); }
+.btn-primary {
+  width: 100%; padding: 16px; border: none; border-radius: var(--radius);
+  background: var(--accent); color: #111; font-family: var(--font-body);
+  font-size: 1rem; font-weight: 600; cursor: pointer; transition: background var(--transition);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary {
+  padding: 10px 24px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text); font-family: var(--font-body);
+  font-size: 0.9rem; font-weight: 500; cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.btn-secondary:hover { border-color: var(--accent); background: rgba(201,168,76,0.08); }
+.home-nav { display: flex; gap: 12px; width: 100%; }
+.nav-pill {
+  flex: 1; padding: 12px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-card); color: var(--text); font-family: var(--font-body);
+  font-size: 0.85rem; font-weight: 500; cursor: pointer;
+  transition: border-color var(--transition), background var(--transition); text-align: center;
+}
+.nav-pill:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+.screen-inner { width: 100%; max-width: 640px; margin: 0 auto; padding: 20px; }
+.screen-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.screen-header h2 { font-family: var(--font-display); font-size: 1.5rem; }
+.back-arrow {
+  background: none; border: 1px solid var(--border); color: var(--text);
+  width: 40px; height: 40px; border-radius: 50%; font-size: 1.2rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color var(--transition); flex-shrink: 0;
+}
+.back-arrow:hover { border-color: var(--accent); }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.gallery-card {
+  border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-card);
+  border: 1px solid var(--border); cursor: pointer;
+  transition: border-color var(--transition), transform 0.2s ease;
+}
+.gallery-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.gallery-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.gallery-card-info { padding: 10px; }
+.gallery-card-title { font-family: var(--font-display); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gallery-card-artist { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tours-list { display: flex; flex-direction: column; gap: 14px; }
+.tour-card {
+  display: flex; gap: 16px; padding: 16px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer;
+  transition: border-color var(--transition), background var(--transition); align-items: center;
+}
+.tour-card:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+.tour-icon {
+  width: 56px; height: 56px; border-radius: var(--radius-sm); background: var(--surface);
+  display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0;
+}
+.tour-text { flex: 1; min-width: 0; }
+.tour-text h3 { font-family: var(--font-display); font-size: 1.05rem; }
+.tour-desc { color: var(--text-muted); font-size: 0.82rem; margin-top: 3px; line-height: 1.4; }
+.tour-count { font-size: 0.72rem; color: var(--accent); margin-top: 4px; font-weight: 500; }
+.game-container {
+  width: 100%; max-width: 520px; margin: 0 auto; padding: 16px;
+  display: flex; flex-direction: column; min-height: 100dvh;
+}
+.game-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.game-title-block { flex: 1; min-width: 0; }
+.game-art-title { font-family: var(--font-display); font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-art-artist { font-size: 0.78rem; color: var(--text-muted); }
+.game-info-btn { position: static; flex-shrink: 0; }
+.game-area { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.reference-wrap { flex-shrink: 0; width: 80px; display: flex; flex-direction: column; gap: 4px; }
+.reference-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.reference-label { text-align: center; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+.puzzle-board {
+  flex: 1; aspect-ratio: 1; display: grid;
+  grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
+  gap: 3px; background: var(--surface); border-radius: var(--radius-sm);
+  padding: 3px; max-width: 400px;
+}
+.puzzle-tile {
+  border-radius: 4px; overflow: hidden; cursor: pointer;
+  transition: transform 0.15s ease; background-size: 400% 400%; background-repeat: no-repeat;
+}
+.puzzle-tile:hover { transform: scale(0.96); }
+.puzzle-tile.empty { background: transparent !important; cursor: default; }
+.puzzle-tile.empty:hover { transform: none; }
+.game-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 12px; }
+.stat { text-align: center; }
+.stat-label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+.stat-value { font-size: 1.3rem; font-weight: 600; color: var(--accent); }
+.game-controls { display: flex; justify-content: center; gap: 12px; }
+.puzzle-tile.correct { box-shadow: inset 0 0 0 2px #4ade80, 0 0 8px rgba(74,222,128,0.3); }
+.peek-overlay {
+  position: absolute; inset: 0; z-index: 10; border-radius: var(--radius-sm);
+  background-size: cover; background-position: center; opacity: 0;
+  transition: opacity 0.2s ease; pointer-events: none;
+}
+.peek-overlay.visible { opacity: 1; }
+.puzzle-board-wrap { position: relative; flex: 1; max-width: 400px; }
+.info-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 20px; backdrop-filter: blur(4px);
+}
+.info-panel {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 32px 28px; max-width: 420px; width: 100%; position: relative;
+  max-height: 80vh; overflow-y: auto;
+}
+.info-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; }
+.info-close:hover { color: var(--text); }
+.info-panel h2 { font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 6px; }
+.info-artist { color: var(--accent); font-size: 0.9rem; }
+.info-year { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+.info-museum { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; font-style: italic; }
+.info-desc { font-size: 0.88rem; line-height: 1.65; }
+.win-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px; backdrop-filter: blur(6px);
+}
+.win-panel {
+  background: var(--bg-card); border: 1px solid var(--accent); border-radius: var(--radius);
+  padding: 32px 24px; max-width: 380px; width: 100%; text-align: center;
+}
+.win-title { font-family: var(--font-display); font-size: 1.6rem; color: var(--accent); margin-bottom: 16px; }
+.win-img { width: 100%; max-width: 260px; border-radius: var(--radius-sm); margin-bottom: 16px; }
+.win-stats { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; }
+.win-art-info { font-size: 0.85rem; color: var(--text); font-family: var(--font-display); margin-bottom: 20px; }
+.win-actions { display: flex; gap: 12px; }
+.win-actions .btn-primary, .win-actions .btn-secondary { flex: 1; }
+.hidden { display: none !important; }
+@media (max-width: 480px) {
+  .logo-title { font-size: 2rem; }
+  .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .reference-wrap { width: 64px; }
+}
+@media (min-width: 768px) {
+  .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+  </style>
+</head>
+<body>
+  <!-- SPLASH / HOME SCREEN -->
+  <div id="screen-home" class="screen active">
+    <div class="home-container">
+      <div class="home-header">
+        <h1 class="logo-title">Museum<span class="logo-accent">Tiles</span></h1>
+        <p class="tagline">Slide. Solve. Discover great art.</p>
+      </div>
+      <div class="home-card featured-card" id="featured-card">
+        <div class="featured-card-inner">
+          <div class="featured-card-front">
+            <div class="featured-img-wrap">
+              <img id="featured-img" src="" alt="Featured artwork">
+            </div>
+            <div class="featured-meta">
+              <span class="featured-label">Today's Masterpiece</span>
+              <h2 id="featured-title" class="featured-name"></h2>
+              <p id="featured-artist" class="featured-artist-name"></p>
+            </div>
+            <button class="info-btn" id="btn-flip-featured" aria-label="Show artwork info">i</button>
+          </div>
+          <div class="featured-card-back">
+            <button class="info-btn back-btn" id="btn-unflip-featured" aria-label="Show artwork">&#x2190;</button>
+            <h2 id="back-title" class="back-title"></h2>
+            <p id="back-artist" class="back-artist"></p>
+            <p id="back-year" class="back-year"></p>
+            <p id="back-museum" class="back-museum"></p>
+            <div class="back-divider"></div>
+            <p id="back-description" class="back-description"></p>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" id="btn-play-today">Play Today's Puzzle</button>
+      <div class="home-nav">
+        <button class="nav-pill" id="btn-go-gallery">Browse Past Puzzles</button>
+        <button class="nav-pill" id="btn-go-tours">Guided Tours</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GALLERY SCREEN -->
+  <div id="screen-gallery" class="screen">
+    <div class="screen-inner">
+      <header class="screen-header">
+        <button class="back-arrow" id="btn-gallery-back">&larr;</button>
+        <h2>Gallery</h2>
+      </header>
+      <div class="gallery-grid" id="gallery-grid"></div>
+    </div>
+  </div>
+
+  <!-- TOURS SCREEN -->
+  <div id="screen-tours" class="screen">
+    <div class="screen-inner">
+      <header class="screen-header">
+        <button class="back-arrow" id="btn-tours-back">&larr;</button>
+        <h2>Guided Tours</h2>
+      </header>
+      <div class="tours-list" id="tours-list"></div>
+    </div>
+  </div>
+
+  <!-- TOUR DETAIL SCREEN -->
+  <div id="screen-tour-detail" class="screen">
+    <div class="screen-inner">
+      <header class="screen-header">
+        <button class="back-arrow" id="btn-tour-detail-back">&larr;</button>
+        <h2 id="tour-detail-title"></h2>
+      </header>
+      <p id="tour-detail-desc" class="tour-desc"></p>
+      <div class="gallery-grid" id="tour-detail-grid"></div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game" class="screen">
+    <div class="game-container">
+      <header class="game-header">
+        <button class="back-arrow" id="btn-game-back">&larr;</button>
+        <div class="game-title-block">
+          <h2 id="game-art-title" class="game-art-title"></h2>
+          <p id="game-art-artist" class="game-art-artist"></p>
+        </div>
+        <button class="info-btn game-info-btn" id="btn-game-info">i</button>
+      </header>
+      <div class="game-area">
+        <div class="reference-wrap">
+          <img id="game-reference" src="" alt="Reference image" class="reference-img">
+          <span class="reference-label">Reference</span>
+        </div>
+        <div class="puzzle-board-wrap">
+          <div class="puzzle-board" id="puzzle-board"></div>
+          <div class="peek-overlay" id="peek-overlay"></div>
+        </div>
+      </div>
+      <div class="game-stats">
+        <div class="stat"><span class="stat-label">Moves</span><span class="stat-value" id="stat-moves">0</span></div>
+        <div class="stat"><span class="stat-label">Time</span><span class="stat-value" id="stat-time">0:00</span></div>
+      </div>
+      <div class="game-controls">
+        <button class="btn-secondary" id="btn-hint">Hint</button>
+        <button class="btn-secondary" id="btn-peek">Hold to Peek</button>
+        <button class="btn-secondary" id="btn-shuffle">Shuffle</button>
+      </div>
+    </div>
+    <div class="info-overlay hidden" id="info-overlay">
+      <div class="info-panel">
+        <button class="info-close" id="btn-close-info">&times;</button>
+        <h2 id="info-title"></h2>
+        <p id="info-artist" class="info-artist"></p>
+        <p id="info-year" class="info-year"></p>
+        <p id="info-museum" class="info-museum"></p>
+        <div class="back-divider"></div>
+        <p id="info-description" class="info-desc"></p>
+      </div>
+    </div>
+    <div class="win-overlay hidden" id="win-overlay">
+      <div class="win-panel">
+        <h2 class="win-title">Masterpiece Complete!</h2>
+        <img id="win-img" src="" alt="Completed artwork" class="win-img">
+        <p id="win-stats" class="win-stats"></p>
+        <p id="win-art-info" class="win-art-info"></p>
+        <div class="win-actions">
+          <button class="btn-primary" id="btn-win-next">Next Puzzle</button>
+          <button class="btn-secondary" id="btn-win-home">Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+// ARTWORK DATABASE
+// ============================================================
+const ARTWORKS = [
+  {id:"mona-lisa",title:"Mona Lisa",artist:"Leonardo da Vinci",year:"c. 1503-1519",museum:"Louvre, Paris",tour:"louvre",description:"Perhaps the most famous painting in the world, the Mona Lisa depicts a half-length portrait of a woman whose mysterious smile has captivated viewers for over five centuries. Leonardo used his signature sfumato technique, creating soft transitions between colors and tones that give the subject an almost living quality. The identity of the sitter is believed to be Lisa Gherardini, wife of Florentine merchant Francesco del Giocondo.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/460px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"},
+  {id:"winged-victory",title:"Winged Victory of Samothrace",artist:"Unknown",year:"c. 190 BC",museum:"Louvre, Paris",tour:"louvre",description:"This magnificent Hellenistic sculpture depicts Nike, the Greek goddess of victory, alighting on the prow of a warship. Standing over 8 feet tall, the figure's windswept drapery and powerful forward motion create one of the most dynamic compositions in ancient art. The sculpture was discovered in 1863 on the island of Samothrace and is considered one of the greatest masterpieces of Greek sculpture.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Victoire_de_Samothrace_-_vue_de_trois-quart_gauche%2C_gros_plan_de_la_statue_%28bg_removed%29.png/440px-Victoire_de_Samothrace_-_vue_de_trois-quart_gauche%2C_gros_plan_de_la_statue_%28bg_removed%29.png"},
+  {id:"liberty-leading",title:"Liberty Leading the People",artist:"Eugene Delacroix",year:"1830",museum:"Louvre, Paris",tour:"louvre",description:"This iconic painting commemorates the July Revolution of 1830 in France. The allegorical figure of Liberty, bare-breasted and holding the French tricolor, strides over the barricades leading citizens of all social classes. Delacroix combined Romantic idealism with gritty realism\u2014the foreground is littered with fallen fighters. The painting became a powerful symbol of republican values and inspired the design of the Statue of Liberty.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Eug%C3%A8ne_Delacroix_-_Le_28_Juillet._La_Libert%C3%A9_guidant_le_peuple.jpg/600px-Eug%C3%A8ne_Delacroix_-_Le_28_Juillet._La_Libert%C3%A9_guidant_le_peuple.jpg"},
+  {id:"venus-de-milo",title:"Venus de Milo",artist:"Alexandros of Antioch",year:"c. 130-100 BC",museum:"Louvre, Paris",tour:"louvre",description:"This ancient Greek statue depicts Aphrodite, the goddess of love and beauty. Carved from Parian marble, the figure stands 6 feet 8 inches tall and is renowned for its graceful, spiral composition. The missing arms have been the subject of endless speculation\u2014she may have held an apple, a mirror, or the shield of Ares. Discovered in 1820 on the island of Milos, it has become an icon of classical beauty.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Venus_de_Milo_at_the_Louvre.jpg/390px-Venus_de_Milo_at_the_Louvre.jpg"},
+  {id:"wedding-at-cana",title:"The Wedding at Cana",artist:"Paolo Veronese",year:"1563",museum:"Louvre, Paris",tour:"louvre",description:"The largest painting in the Louvre, this massive canvas (22 x 32 feet) depicts the biblical story of Jesus turning water into wine at a wedding feast. Veronese populated the scene with over 130 figures, including contemporary Venetian nobles, musicians, and even portraits of fellow artists Titian, Tintoretto, and Bassano. The painting hangs directly opposite the Mona Lisa.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Paolo_Veronese_008.jpg/600px-Paolo_Veronese_008.jpg"},
+  {id:"water-lilies-morning",title:"Water Lilies: Morning",artist:"Claude Monet",year:"c. 1915-1926",museum:"Musee de l'Orangerie, Paris",tour:"orangerie",description:"Part of Monet's monumental Water Lilies cycle, this expansive mural envelops the viewer in the artist's beloved water garden at Giverny. Monet painted these works in his specially built studio during the last years of his life, even as his eyesight was failing from cataracts. The paintings were installed in the Orangerie in 1927, shortly after his death, in two oval rooms that Monet himself helped design.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Chicago.jpg/600px-Claude_Monet_-_Water_Lilies_-_1906%2C_Chicago.jpg"},
+  {id:"the-young-girls-at-piano",title:"Young Girls at the Piano",artist:"Pierre-Auguste Renoir",year:"1892",museum:"Musee de l'Orangerie, Paris",tour:"orangerie",description:"This charming Impressionist painting captures two young girls absorbed in music. Renoir's warm palette and soft brushwork create an intimate domestic scene bathed in golden light. This was the first painting by Renoir to be acquired by the French state, marking official recognition of the Impressionist movement. Multiple versions of this composition exist, demonstrating Renoir's careful refinement of the subject.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Auguste_Renoir_-_Young_Girls_at_the_Piano_-_Google_Art_Project.jpg/460px-Auguste_Renoir_-_Young_Girls_at_the_Piano_-_Google_Art_Project.jpg"},
+  {id:"the-female-clown",title:"The Female Clown (Cha-U-Kao)",artist:"Henri de Toulouse-Lautrec",year:"1895",museum:"Musee de l'Orangerie, Paris",tour:"orangerie",description:"This bold portrait depicts a female clown and acrobat known as Cha-U-Kao, who performed at the Moulin Rouge and Nouveau Cirque. Toulouse-Lautrec, himself a fixture of Parisian nightlife, captured her with characteristic empathy and directness. The unusual cropped composition and vivid colors show the influence of Japanese woodblock prints on the Post-Impressionist movement.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Lautrec_the_clownesse_cha-u-kao_at_the_moulin_rouge_1895.jpg/460px-Lautrec_the_clownesse_cha-u-kao_at_the_moulin_rouge_1895.jpg"},
+  {id:"paul-guillaume-novo-pilota",title:"Paul Guillaume, Novo Pilota",artist:"Amedeo Modigliani",year:"1915",museum:"Musee de l'Orangerie, Paris",tour:"orangerie",description:"This portrait of art dealer Paul Guillaume showcases Modigliani's signature style: elongated features, almond-shaped eyes, and simplified forms inspired by African sculpture. Guillaume was an early champion of modern art and African art in Paris; his personal collection of Impressionist and Post-Impressionist works would eventually form the core of the Orangerie's permanent collection.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Amedeo_Modigliani_-_Paul_Guillaume%2C_Novo_Pilota_-_Google_Art_Project.jpg/380px-Amedeo_Modigliani_-_Paul_Guillaume%2C_Novo_Pilota_-_Google_Art_Project.jpg"},
+  {id:"apples-and-biscuits",title:"Apples and Biscuits",artist:"Paul Cezanne",year:"c. 1895",museum:"Musee de l'Orangerie, Paris",tour:"orangerie",description:"Cezanne's still lifes revolutionized how artists approached form and space. In this composition, he deliberately distorted perspective\u2014the table tilts at different angles, objects seem viewed from multiple viewpoints simultaneously. These experiments with fractured space profoundly influenced Picasso and Braque and laid the groundwork for Cubism. Cezanne once declared he wanted to 'treat nature by the cylinder, the sphere, the cone.'",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Paul_C%C3%A9zanne_-_Pommes_et_biscuits.jpg/600px-Paul_C%C3%A9zanne_-_Pommes_et_biscuits.jpg"},
+  {id:"the-west-wind",title:"The West Wind",artist:"Tom Thomson",year:"1917",museum:"Art Gallery of Ontario, Toronto",tour:"ago",description:"This iconic painting shows a wind-bent pine tree on a rocky shore of a northern Ontario lake, embodying the rugged beauty of the Canadian wilderness. Painted shortly before Thomson's mysterious death by drowning in Canoe Lake, it has become one of Canada's most recognized images. Thomson's bold, expressive brushwork and vibrant palette deeply influenced the Group of Seven who carried on his artistic legacy.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Tom_Thomson_-_The_West_Wind_-_Google_Art_Project.jpg/600px-Tom_Thomson_-_The_West_Wind_-_Google_Art_Project.jpg"},
+  {id:"lake-and-mountains",title:"Lake and Mountains",artist:"Lawren Harris",year:"1928",museum:"Art Gallery of Ontario, Toronto",tour:"ago",description:"Lawren Harris, a founding member of the Group of Seven, created some of Canada's most transcendent landscapes. This painting strips the northern landscape to its spiritual essence\u2014simplified mountain forms, luminous skies, and mirror-still water create an almost mystical atmosphere. Harris was influenced by theosophy and sought to express the divine spirit he felt in the Canadian landscape.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Lawren_Harris_-_Lake_and_Mountains.jpg/600px-Lawren_Harris_-_Lake_and_Mountains.jpg"},
+  {id:"assiniboine-hunting-buffalo",title:"Assiniboine Hunting Buffalo",artist:"Paul Kane",year:"c. 1851-1856",museum:"Art Gallery of Ontario, Toronto",tour:"ago",description:"Paul Kane spent years traveling through western Canada documenting Indigenous peoples and landscapes. This dramatic painting captures an Assiniboine buffalo hunt on the Great Plains, one of many subjects Kane recorded during his epic 1846-1848 journey from Toronto to the Pacific. His vivid compositions, painted from field sketches, provide a remarkable visual record of life in pre-Confederation Canada. The AGO holds the largest collection of Kane's work.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Paul_Kane_-_Assiniboine_hunting_buffalo.jpg/600px-Paul_Kane_-_Assiniboine_hunting_buffalo.jpg"},
+  {id:"massacre-of-innocents",title:"The Massacre of the Innocents",artist:"Peter Paul Rubens",year:"c. 1611-1612",museum:"Art Gallery of Ontario, Toronto",tour:"ago",description:"This monumental Baroque painting depicts the biblical story of King Herod's order to kill all male infants in Bethlehem. Rubens captures the scene with visceral intensity\u2014muscular soldiers, desperate mothers, and writhing figures create a composition of controlled chaos. Purchased by the AGO in 2002 for $76.7 million, it was the most expensive Old Master painting ever sold at that time.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Massacre_of_the_Innocents_by_Rubens.jpg/500px-Massacre_of_the_Innocents_by_Rubens.jpg"},
+  {id:"the-birches",title:"The Birches",artist:"Tom Thomson",year:"1916",museum:"Art Gallery of Ontario, Toronto",tour:"ago",description:"Thomson's vibrant depiction of birch trees showcases his revolutionary approach to the Canadian landscape. Using thick impasto brushwork and bold color, he transformed a simple forest scene into a symphony of autumn hues. The AGO houses the world's largest collection of Thomson's work, including many of his small oil sketches painted en plein air in Algonquin Park.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Tom_Thomson_Autumn_Birches.jpg/500px-Tom_Thomson_Autumn_Birches.jpg"},
+  {id:"starry-night",title:"The Starry Night",artist:"Vincent van Gogh",year:"1889",museum:"MoMA, New York",tour:"masterpieces",description:"Painted from Van Gogh's window at the Saint-Paul-de-Mausole asylum in Saint-Remy-de-Provence, this painting transforms a quiet pre-dawn view into a cosmic vision. The swirling sky, blazing stars, and crescent moon pulse with energy, while the sleeping village below rests peacefully. Van Gogh painted it during one of his most productive periods, despite struggling with severe mental illness.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/600px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg"},
+  {id:"girl-with-pearl-earring",title:"Girl with a Pearl Earring",artist:"Johannes Vermeer",year:"c. 1665",museum:"Mauritshuis, The Hague",tour:"masterpieces",description:"Often called the 'Mona Lisa of the North,' this painting depicts a girl in exotic dress with an unusually large pearl earring. Vermeer's masterful use of light\u2014the luminous skin, the moist parted lips, the gleaming pearl\u2014creates an image of astonishing intimacy. The identity of the girl remains unknown; she may be a tronie (character study) rather than a portrait of a specific person.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/440px-1665_Girl_with_a_Pearl_Earring.jpg"},
+  {id:"great-wave",title:"The Great Wave off Kanagawa",artist:"Katsushika Hokusai",year:"c. 1831",museum:"Various collections",tour:"masterpieces",description:"This iconic woodblock print shows a towering wave threatening boats near Kanagawa, with Mount Fuji visible in the background. Part of Hokusai's series 'Thirty-six Views of Mount Fuji,' it brilliantly contrasts the power of nature against human vulnerability. The print profoundly influenced European Impressionists and remains one of the most reproduced images in art history. Hokusai was about 70 years old when he created it.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/600px-Tsunami_by_hokusai_19th_century.jpg"},
+  {id:"the-persistence-of-memory",title:"The Persistence of Memory",artist:"Salvador Dali",year:"1931",museum:"MoMA, New York",tour:"masterpieces",description:"Dali's most famous painting features melting watches draped over a barren landscape, creating a dreamlike meditation on the nature of time. The soft watches, which Dali said were inspired by melting Camembert cheese, suggest that time is not as rigid as we perceive it. The hard, rocky coastline of Catalonia in the background contrasts with the soft, unstable forms, blending reality and dream.",image:"https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg"},
+  {id:"cafe-terrace-at-night",title:"Cafe Terrace at Night",artist:"Vincent van Gogh",year:"1888",museum:"Kroller-Muller Museum, Netherlands",tour:"masterpieces",description:"This vibrant night scene depicts the terrace of a cafe on the Place du Forum in Arles, France. It was one of the first paintings in which Van Gogh used a starry background, anticipating The Starry Night. The warm yellows of the gaslit cafe contrast with the deep blue of the starry sky, demonstrating Van Gogh's brilliant use of complementary colors. Remarkably, he painted it on location, at night, by gaslight.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Vincent_Willem_van_Gogh_-_Cafe_Terrace_at_Night_%28Yorck%29.jpg/460px-Vincent_Willem_van_Gogh_-_Cafe_Terrace_at_Night_%28Yorck%29.jpg"},
+  {id:"birth-of-venus",title:"The Birth of Venus",artist:"Sandro Botticelli",year:"c. 1485",museum:"Uffizi Gallery, Florence",tour:"masterpieces",description:"Botticelli's masterpiece depicts the goddess Venus emerging from the sea as a fully grown woman, blown toward shore by the winds. The painting's graceful linear style, with its flowing hair and delicate drapery, represents the height of Early Renaissance art. Commissioned by the Medici family, it was one of the first large-scale paintings of a mythological subject since antiquity.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/600px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg"},
+  {id:"night-watch",title:"The Night Watch",artist:"Rembrandt van Rijn",year:"1642",museum:"Rijksmuseum, Amsterdam",tour:"masterpieces",description:"Rembrandt's largest and most famous painting depicts a militia company marching out under the command of Captain Frans Banning Cocq. Revolutionary for its time, Rembrandt gave the group portrait a sense of motion and drama, using dramatic lighting to create a composition more like a history painting than a static portrait. The painting's popular name is a misnomer\u2014it actually depicts a daytime scene darkened by layers of varnish.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_HD.jpg/600px-The_Night_Watch_-_HD.jpg"},
+  {id:"sunday-on-la-grande-jatte",title:"A Sunday on La Grande Jatte",artist:"Georges Seurat",year:"1886",museum:"Art Institute of Chicago",tour:"masterpieces",description:"Seurat spent two years creating this monumental painting using pointillism\u2014tiny dots of pure color placed side by side to blend optically in the viewer's eye. The scene shows Parisians relaxing on an island in the Seine, rendered with an almost geometric precision that gives the figures a sculptural quality. It transformed the course of modern art and inspired the Stephen Sondheim musical 'Sunday in the Park with George.'",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg/600px-A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg"},
+  {id:"the-scream",title:"The Scream",artist:"Edvard Munch",year:"1893",museum:"National Gallery, Oslo",tour:"masterpieces",description:"Munch's most famous work shows a figure on a bridge, hands raised to its face in an anguished scream, beneath a turbulent orange sky. Munch wrote that the inspiration came while walking at sunset: 'I sensed a scream passing through nature.' The painting has become a universal symbol of modern anxiety. There are actually four versions\u2014two paintings, a lithograph, and a pastel\u2014created between 1893 and 1910.",image:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/400px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg"},
+  {id:"guernica",title:"Guernica",artist:"Pablo Picasso",year:"1937",museum:"Museo Reina Sofia, Madrid",tour:"masterpieces",description:"Picasso's monumental anti-war painting was created in response to the bombing of the Basque town of Guernica during the Spanish Civil War. Rendered in stark black, white, and grey, the chaotic composition of screaming figures, a dying horse, and a dismembered soldier conveys the horror of modern warfare. Picasso insisted the painting remain outside Spain until democracy was restored; it was finally moved to Madrid in 1981.",image:"https://upload.wikimedia.org/wikipedia/en/7/74/Guernica.jpg"}
+];
+
+const TOURS = [
+  {id:"louvre",name:"The Louvre",city:"Paris, France",icon:"\u{1F3DB}",description:"Home to the Mona Lisa and over 35,000 works spanning millennia. Explore the world's most visited museum."},
+  {id:"orangerie",name:"Musee de l'Orangerie",city:"Paris, France",icon:"\u{1F338}",description:"Monet's Water Lilies and a stunning collection of Impressionist and Post-Impressionist masterpieces in the Tuileries Garden."},
+  {id:"ago",name:"Art Gallery of Ontario",city:"Toronto, Canada",icon:"\u{1F341}",description:"One of the largest art museums in North America, home to the Group of Seven and the world's largest collection of Canadian art."},
+  {id:"masterpieces",name:"World Masterpieces",city:"Global",icon:"\u{1F30D}",description:"The greatest hits of art history \u2014 iconic works from museums around the world that every art lover should know."}
+];
+
+// ============================================================
+// GAME ENGINE
+// ============================================================
+(function () {
+  "use strict";
+  const GRID = 4;
+  const TOTAL = GRID * GRID;
+  let currentArtwork = null;
+  let tiles = [];
+  let moves = 0;
+  let timerInterval = null;
+  let seconds = 0;
+  let gameActive = false;
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+  const screenHome = $("#screen-home");
+  const screenGallery = $("#screen-gallery");
+  const screenTours = $("#screen-tours");
+  const screenTourDetail = $("#screen-tour-detail");
+  const screenGame = $("#screen-game");
+
+  function showScreen(screen) {
+    $$(".screen").forEach((s) => s.classList.remove("active"));
+    screen.classList.add("active");
+    screen.scrollTop = 0;
+  }
+  function getArtworkOfTheDay() {
+    const today = new Date();
+    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+    return ARTWORKS[dayOfYear % ARTWORKS.length];
+  }
+  function getPastArtworks() {
+    const todayId = getArtworkOfTheDay().id;
+    const all = [...ARTWORKS];
+    const todayIdx = all.findIndex((a) => a.id === todayId);
+    const before = all.slice(0, todayIdx);
+    const after = all.slice(todayIdx + 1);
+    return [...after, ...before];
+  }
+  function initHome() {
+    const art = getArtworkOfTheDay();
+    $("#featured-img").src = art.image;
+    $("#featured-img").alt = art.title;
+    $("#featured-title").textContent = art.title;
+    $("#featured-artist").textContent = art.artist;
+    $("#back-title").textContent = art.title;
+    $("#back-artist").textContent = art.artist;
+    $("#back-year").textContent = art.year;
+    $("#back-museum").textContent = art.museum;
+    $("#back-description").textContent = art.description;
+    const card = $("#featured-card");
+    $("#btn-flip-featured").onclick = () => card.classList.add("flipped");
+    $("#btn-unflip-featured").onclick = () => card.classList.remove("flipped");
+    $("#btn-play-today").onclick = () => startGame(art);
+    $("#btn-go-gallery").onclick = () => { initGallery(); showScreen(screenGallery); };
+    $("#btn-go-tours").onclick = () => { initTours(); showScreen(screenTours); };
+  }
+  function initGallery() {
+    const grid = $("#gallery-grid");
+    grid.innerHTML = "";
+    getPastArtworks().forEach((art) => {
+      const card = document.createElement("div");
+      card.className = "gallery-card";
+      card.innerHTML = '<img class="gallery-card-img" src="'+art.image+'" alt="'+art.title+'" loading="lazy"><div class="gallery-card-info"><div class="gallery-card-title">'+art.title+'</div><div class="gallery-card-artist">'+art.artist+'</div></div>';
+      card.onclick = () => startGame(art);
+      grid.appendChild(card);
+    });
+  }
+  function initTours() {
+    const list = $("#tours-list");
+    list.innerHTML = "";
+    TOURS.forEach((tour) => {
+      const count = ARTWORKS.filter((a) => a.tour === tour.id).length;
+      const card = document.createElement("div");
+      card.className = "tour-card";
+      card.innerHTML = '<div class="tour-icon">'+tour.icon+'</div><div class="tour-text"><h3>'+tour.name+'</h3><p class="tour-desc">'+tour.description+'</p><p class="tour-count">'+count+' artwork'+(count!==1?'s':'')+'</p></div>';
+      card.onclick = () => { initTourDetail(tour); showScreen(screenTourDetail); };
+      list.appendChild(card);
+    });
+  }
+  function initTourDetail(tour) {
+    $("#tour-detail-title").textContent = tour.name;
+    $("#tour-detail-desc").textContent = tour.description;
+    const grid = $("#tour-detail-grid");
+    grid.innerHTML = "";
+    ARTWORKS.filter((a) => a.tour === tour.id).forEach((art) => {
+      const card = document.createElement("div");
+      card.className = "gallery-card";
+      card.innerHTML = '<img class="gallery-card-img" src="'+art.image+'" alt="'+art.title+'" loading="lazy"><div class="gallery-card-info"><div class="gallery-card-title">'+art.title+'</div><div class="gallery-card-artist">'+art.artist+'</div></div>';
+      card.onclick = () => startGame(art);
+      grid.appendChild(card);
+    });
+  }
+  function solvedState() { const a=[]; for(let i=1;i<TOTAL;i++) a.push(i); a.push(0); return a; }
+  function isSolved() { const s=solvedState(); return tiles.every((t,i)=>t===s[i]); }
+  function emptyPos() { const i=tiles.indexOf(0); return {row:Math.floor(i/GRID),col:i%GRID,idx:i}; }
+  function canMove(idx) { const e=emptyPos(),r=Math.floor(idx/GRID),c=idx%GRID; return (r===e.row&&Math.abs(c-e.col)===1)||(c===e.col&&Math.abs(r-e.row)===1); }
+  function moveTile(idx) { if(!canMove(idx)) return false; const e=emptyPos(); [tiles[idx],tiles[e.idx]]=[tiles[e.idx],tiles[idx]]; return true; }
+  function countInversions(arr) { let inv=0; for(let i=0;i<arr.length;i++) for(let j=i+1;j<arr.length;j++) if(arr[i]&&arr[j]&&arr[i]>arr[j]) inv++; return inv; }
+  function isSolvable(arr) { const inv=countInversions(arr),emptyRow=Math.floor(arr.indexOf(0)/GRID),fromBottom=GRID-emptyRow; return (inv%2===0)===(fromBottom%2===1); }
+  function shuffleTiles() { do { tiles=solvedState(); for(let i=tiles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [tiles[i],tiles[j]]=[tiles[j],tiles[i]]; } } while(!isSolvable(tiles)||isSolved()); }
+  function renderBoard() {
+    const board=$("#puzzle-board"); board.innerHTML="";
+    tiles.forEach((tileNum,idx) => {
+      const div=document.createElement("div");
+      div.className="puzzle-tile"+(tileNum===0?" empty":"");
+      if(tileNum!==0){ const srcRow=Math.floor((tileNum-1)/GRID),srcCol=(tileNum-1)%GRID; div.style.backgroundImage="url('"+currentArtwork.image+"')"; div.style.backgroundPosition=(srcCol/(GRID-1))*100+"% "+(srcRow/(GRID-1))*100+"%"; div.onclick=()=>handleTileClick(idx); }
+      board.appendChild(div);
+    });
+  }
+  function handleTileClick(idx) { if(!gameActive) return; if(moveTile(idx)){ moves++; $("#stat-moves").textContent=moves; renderBoard(); if(isSolved()) onWin(); } }
+  function startTimer() { seconds=0; clearInterval(timerInterval); updateTimerDisplay(); timerInterval=setInterval(()=>{seconds++;updateTimerDisplay();},1000); }
+  function stopTimer() { clearInterval(timerInterval); }
+  function updateTimerDisplay() { const m=Math.floor(seconds/60),s=seconds%60; $("#stat-time").textContent=m+":"+s.toString().padStart(2,"0"); }
+  function startGame(artwork) {
+    currentArtwork=artwork;
+    $("#game-art-title").textContent=artwork.title;
+    $("#game-art-artist").textContent=artwork.artist;
+    $("#game-reference").src=artwork.image;
+    $("#info-title").textContent=artwork.title;
+    $("#info-artist").textContent=artwork.artist;
+    $("#info-year").textContent=artwork.year;
+    $("#info-museum").textContent=artwork.museum;
+    $("#info-description").textContent=artwork.description;
+    moves=0; $("#stat-moves").textContent="0";
+    $("#win-overlay").classList.add("hidden");
+    $("#info-overlay").classList.add("hidden");
+    shuffleTiles(); renderBoard(); gameActive=true; startTimer(); showScreen(screenGame);
+  }
+  function onWin() {
+    gameActive=false; stopTimer();
+    const m=Math.floor(seconds/60),s=seconds%60,timeStr=m+":"+s.toString().padStart(2,"0");
+    $("#win-img").src=currentArtwork.image;
+    $("#win-stats").textContent="Solved in "+moves+" moves \u2022 "+timeStr;
+    $("#win-art-info").textContent=currentArtwork.title+" by "+currentArtwork.artist;
+    $("#win-overlay").classList.remove("hidden");
+  }
+  function bindEvents() {
+    $("#btn-gallery-back").onclick=()=>showScreen(screenHome);
+    $("#btn-tours-back").onclick=()=>showScreen(screenHome);
+    $("#btn-tour-detail-back").onclick=()=>showScreen(screenTours);
+    $("#btn-game-back").onclick=()=>{stopTimer();gameActive=false;showScreen(screenHome);};
+    $("#btn-game-info").onclick=()=>$("#info-overlay").classList.remove("hidden");
+    $("#btn-close-info").onclick=()=>$("#info-overlay").classList.add("hidden");
+    $("#info-overlay").onclick=(e)=>{if(e.target===$("#info-overlay"))$("#info-overlay").classList.add("hidden");};
+    $("#btn-shuffle").onclick=()=>{shuffleTiles();moves=0;$("#stat-moves").textContent="0";startTimer();gameActive=true;renderBoard();};
+    // Hint: highlight tiles in correct position
+    $("#btn-hint").onclick=()=>{
+      if(!gameActive) return;
+      const solved=solvedState();
+      const allTiles=document.querySelectorAll(".puzzle-tile");
+      allTiles.forEach((el,i)=>{
+        if(tiles[i]!==0 && tiles[i]===solved[i]) el.classList.add("correct");
+      });
+      setTimeout(()=>allTiles.forEach(el=>el.classList.remove("correct")),2000);
+    };
+    // Peek: hold to see full image
+    const peekEl=$("#peek-overlay");
+    const startPeek=()=>{if(!gameActive)return;peekEl.style.backgroundImage="url('"+currentArtwork.image+"')";peekEl.classList.add("visible");};
+    const stopPeek=()=>{peekEl.classList.remove("visible");};
+    $("#btn-peek").addEventListener("mousedown",startPeek);
+    $("#btn-peek").addEventListener("mouseup",stopPeek);
+    $("#btn-peek").addEventListener("mouseleave",stopPeek);
+    $("#btn-peek").addEventListener("touchstart",(e)=>{e.preventDefault();startPeek();});
+    $("#btn-peek").addEventListener("touchend",stopPeek);
+    $("#btn-win-home").onclick=()=>showScreen(screenHome);
+    $("#btn-win-next").onclick=()=>{const ci=ARTWORKS.findIndex(a=>a.id===currentArtwork.id);startGame(ARTWORKS[(ci+1)%ARTWORKS.length]);};
+  }
+  function bindKeyboard() {
+    document.addEventListener("keydown",(e)=>{
+      if(!gameActive) return;
+      const empty=emptyPos(); let t=-1;
+      switch(e.key){
+        case "ArrowUp": if(empty.row<GRID-1) t=(empty.row+1)*GRID+empty.col; break;
+        case "ArrowDown": if(empty.row>0) t=(empty.row-1)*GRID+empty.col; break;
+        case "ArrowLeft": if(empty.col<GRID-1) t=empty.row*GRID+(empty.col+1); break;
+        case "ArrowRight": if(empty.col>0) t=empty.row*GRID+(empty.col-1); break;
+        default: return;
+      }
+      if(t>=0){e.preventDefault();handleTileClick(t);}
+    });
+  }
+  function bindTouch() {
+    let startX,startY; const board=$("#puzzle-board");
+    board.addEventListener("touchstart",(e)=>{if(!gameActive)return;startX=e.touches[0].clientX;startY=e.touches[0].clientY;},{passive:true});
+    board.addEventListener("touchend",(e)=>{
+      if(!gameActive||startX===undefined)return;
+      const dx=e.changedTouches[0].clientX-startX,dy=e.changedTouches[0].clientY-startY,ax=Math.abs(dx),ay=Math.abs(dy);
+      if(Math.max(ax,ay)<20)return;
+      const empty=emptyPos(); let t=-1;
+      if(ax>ay){if(dx>0&&empty.col>0)t=empty.row*GRID+(empty.col-1);else if(dx<0&&empty.col<GRID-1)t=empty.row*GRID+(empty.col+1);}
+      else{if(dy>0&&empty.row>0)t=(empty.row-1)*GRID+empty.col;else if(dy<0&&empty.row<GRID-1)t=(empty.row+1)*GRID+empty.col;}
+      if(t>=0)handleTileClick(t);startX=startY=undefined;
+    },{passive:true});
+  }
+  function init(){initHome();bindEvents();bindKeyboard();bindTouch();}
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+})();
+</script>
+</body>
+</html>
