@@ -12,6 +12,7 @@ Usage:
 Run from the repo root (folder containing index.html).
 """
 import os
+import re
 import sys
 import urllib.request
 from io import BytesIO
@@ -27,6 +28,19 @@ OUT_DIR = os.path.join(REPO_ROOT, "images")
 TARGET_WIDTH = 1000
 JPEG_QUALITY = 85
 USER_AGENT = "MuseumTiles/1.0 (https://github.com/coolcatch/Coolcatch-slide-puzzle)"
+
+def to_thumb(url, width=2000):
+    """Convert a direct Commons URL to a thumbnail URL of given width.
+    This avoids downloading 100MB+ originals for high-res scans."""
+    m = re.match(
+        r"(https://upload\.wikimedia\.org/wikipedia/commons)/"
+        r"([a-z0-9])/([a-z0-9]{2})/([^/]+)$",
+        url,
+    )
+    if not m:
+        return url
+    base, a, ab, fname = m.groups()
+    return f"{base}/thumb/{a}/{ab}/{fname}/{width}px-{fname}"
 
 # id -> original (non-thumbnail) Wikimedia Commons URL
 SOURCES = {
@@ -72,10 +86,25 @@ for artwork_id, url in SOURCES.items():
         total_kb += kb
         continue
     print(f"[{artwork_id}]")
+    # Try a 2000px thumbnail first (fast, avoids 100MB+ originals).
+    # Fall back to the original if the thumbnail endpoint fails.
+    candidates = [to_thumb(url, 2000), url]
+    data = None
+    last_err = None
+    for candidate in candidates:
+        try:
+            req = urllib.request.Request(candidate, headers={"User-Agent": USER_AGENT})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                data = r.read()
+            break
+        except Exception as e:
+            last_err = e
+            print(f"  retry: {type(e).__name__} on {candidate[:80]}...")
+    if data is None:
+        print(f"  FAIL: {last_err}")
+        fail += 1
+        continue
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=60) as r:
-            data = r.read()
         img = Image.open(BytesIO(data)).convert("RGB")
         w, h = img.size
         if w > TARGET_WIDTH:
@@ -87,7 +116,7 @@ for artwork_id, url in SOURCES.items():
         print(f"  OK {img.size[0]}x{img.size[1]}  {kb} KB")
         ok += 1
     except Exception as e:
-        print(f"  FAIL: {e}")
+        print(f"  FAIL (decode): {e}")
         fail += 1
 
 print(f"\nDone. {ok} succeeded, {fail} failed. Total: {total_kb/1024:.1f} MB")
