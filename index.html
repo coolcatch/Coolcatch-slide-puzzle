@@ -149,18 +149,17 @@ body {
 .reference-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .reference-label { text-align: center; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
 .puzzle-board {
-  flex: 1; aspect-ratio: 1; display: grid;
-  grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
-  gap: 3px; background: var(--surface); border-radius: var(--radius-sm);
-  padding: 3px; max-width: 400px;
+  flex: 1; aspect-ratio: 1; position: relative;
+  background: var(--surface); border-radius: var(--radius-sm);
+  max-width: 400px; overflow: hidden;
 }
 .puzzle-tile {
+  position: absolute; top: 0; left: 0;
   border-radius: 4px; overflow: hidden; cursor: pointer;
-  transition: transform 0.15s ease; background-repeat: no-repeat;
+  transition: transform 0.18s ease, filter 0.15s ease;
+  background-repeat: no-repeat; will-change: transform;
 }
-.puzzle-tile:hover { transform: scale(0.96); }
-.puzzle-tile.empty { background: transparent !important; cursor: default; }
-.puzzle-tile.empty:hover { transform: none; }
+.puzzle-tile:hover { filter: brightness(1.15); }
 .size-toggle-row { display: flex; justify-content: center; margin-bottom: 12px; }
 .size-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
 .size-btn {
@@ -214,6 +213,9 @@ body {
 .win-img { width: 100%; max-width: 260px; border-radius: var(--radius-sm); margin-bottom: 16px; }
 .win-stats { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; }
 .win-art-info { font-size: 0.85rem; color: var(--text); font-family: var(--font-display); margin-bottom: 20px; }
+.win-streak { color: var(--accent); font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+.win-best { color: #4ade80; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+.win-share { width: 100%; margin-bottom: 12px; }
 .win-actions { display: flex; gap: 12px; }
 .win-actions .btn-primary, .win-actions .btn-secondary { flex: 1; }
 .hidden { display: none !important; }
@@ -354,7 +356,10 @@ body {
         <h2 class="win-title">Masterpiece Complete!</h2>
         <img id="win-img" src="" alt="Completed artwork" class="win-img">
         <p id="win-stats" class="win-stats"></p>
+        <p id="win-streak" class="win-streak hidden"></p>
+        <p id="win-best" class="win-best hidden">New personal best!</p>
         <p id="win-art-info" class="win-art-info"></p>
+        <button class="btn-secondary win-share" id="btn-share">Share Result</button>
         <div class="win-actions">
           <button class="btn-primary" id="btn-win-next">Next Puzzle</button>
           <button class="btn-secondary" id="btn-win-home">Home</button>
@@ -504,31 +509,52 @@ const TOURS = [
   function countInversions(arr) { let inv=0; for(let i=0;i<arr.length;i++) for(let j=i+1;j<arr.length;j++) if(arr[i]&&arr[j]&&arr[i]>arr[j]) inv++; return inv; }
   function isSolvable(arr) { const inv=countInversions(arr); if(GRID%2===1) return inv%2===0; const emptyRow=Math.floor(arr.indexOf(0)/GRID),fromBottom=GRID-emptyRow; return (inv%2===0)===(fromBottom%2===1); }
   function shuffleTiles() { do { tiles=solvedState(); for(let i=tiles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [tiles[i],tiles[j]]=[tiles[j],tiles[i]]; } } while(!isSolvable(tiles)||isSolved()); }
-  function renderBoard() {
-    const board=$("#puzzle-board"); board.innerHTML="";
-    board.style.gridTemplateColumns="repeat("+GRID+", 1fr)";
-    board.style.gridTemplateRows="repeat("+GRID+", 1fr)";
+  const PAD=3, GAP=3;
+  let tileEls={};
+  function boardMetrics() {
+    const board=$("#puzzle-board");
     const boardSize=board.offsetWidth||400;
-    const tileSize=boardSize/GRID;
+    const inner=boardSize-2*PAD;
+    const tileSize=(inner-(GRID-1)*GAP)/GRID;
     const imgW=currentArtwork._natW||1,imgH=currentArtwork._natH||1;
     const imgRatio=imgW/imgH;
-    // "Cover" math: scale image to fill square board, crop overflow
+    // "Cover" math: scale image to fill inner square, crop overflow
     let bgW,bgH,offX,offY;
-    if(imgRatio>=1){bgH=boardSize;bgW=boardSize*imgRatio;offX=(bgW-boardSize)/2;offY=0;}
-    else{bgW=boardSize;bgH=boardSize/imgRatio;offX=0;offY=(bgH-boardSize)/2;}
-    tiles.forEach((tileNum,idx) => {
+    if(imgRatio>=1){bgH=inner;bgW=inner*imgRatio;offX=(bgW-inner)/2;offY=0;}
+    else{bgW=inner;bgH=inner/imgRatio;offX=0;offY=(bgH-inner)/2;}
+    return {tileSize,bgW,bgH,offX,offY};
+  }
+  function renderBoard() {
+    const board=$("#puzzle-board"); board.innerHTML=""; tileEls={};
+    const m=boardMetrics();
+    for(let n=1;n<TOTAL;n++){
       const div=document.createElement("div");
-      div.className="puzzle-tile"+(tileNum===0?" empty":"");
-      if(tileNum!==0){
-        const srcRow=Math.floor((tileNum-1)/GRID),srcCol=(tileNum-1)%GRID;
-        div.style.backgroundImage="url('"+currentArtwork.image+"')";
-        div.style.backgroundSize=bgW+"px "+bgH+"px";
-        div.style.backgroundPosition=-(offX+srcCol*tileSize)+"px "+-(offY+srcRow*tileSize)+"px";
-        div.onclick=()=>handleTileClick(idx);
-      }
+      div.className="puzzle-tile";
+      div.style.width=m.tileSize+"px"; div.style.height=m.tileSize+"px";
+      const srcRow=Math.floor((n-1)/GRID),srcCol=(n-1)%GRID;
+      div.style.backgroundImage="url('"+currentArtwork.image+"')";
+      div.style.backgroundSize=m.bgW+"px "+m.bgH+"px";
+      div.style.backgroundPosition=-(m.offX+srcCol*(m.tileSize+GAP))+"px "+-(m.offY+srcRow*(m.tileSize+GAP))+"px";
+      div.onclick=()=>handleTileClick(tiles.indexOf(n));
+      tileEls[n]=div;
       board.appendChild(div);
+    }
+    layoutTiles();
+  }
+  function layoutTiles() {
+    const m=boardMetrics();
+    tiles.forEach((tileNum,idx)=>{
+      if(tileNum===0) return;
+      const r=Math.floor(idx/GRID),c=idx%GRID;
+      tileEls[tileNum].style.transform="translate("+(PAD+c*(m.tileSize+GAP))+"px,"+(PAD+r*(m.tileSize+GAP))+"px)";
     });
   }
+  let resizeTimer=null;
+  window.addEventListener("resize",()=>{
+    if(!currentArtwork||!screenGame.classList.contains("active")) return;
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(renderBoard,150);
+  });
   function syncSizeToggle() {
     $("#btn-grid-3").classList.toggle("active", GRID===3);
     $("#btn-grid-4").classList.toggle("active", GRID===4);
@@ -540,7 +566,7 @@ const TOURS = [
     syncSizeToggle();
     if(currentArtwork){ shuffleTiles(); moves=0; $("#stat-moves").textContent="0"; renderBoard(); gameActive=true; startTimer(); }
   }
-  function handleTileClick(idx) { if(!gameActive) return; if(moveTile(idx)){ moves++; $("#stat-moves").textContent=moves; renderBoard(); if(isSolved()) onWin(); } }
+  function handleTileClick(idx) { if(!gameActive) return; if(moveTile(idx)){ moves++; $("#stat-moves").textContent=moves; layoutTiles(); if(isSolved()){ gameActive=false; setTimeout(onWin,220); } } }
   function startTimer() { seconds=0; clearInterval(timerInterval); updateTimerDisplay(); timerInterval=setInterval(()=>{seconds++;updateTimerDisplay();},1000); }
   function stopTimer() { clearInterval(timerInterval); }
   function updateTimerDisplay() { const m=Math.floor(seconds/60),s=seconds%60; $("#stat-time").textContent=m+":"+s.toString().padStart(2,"0"); }
@@ -570,13 +596,62 @@ const TOURS = [
     };
     img.src=artwork.image;
   }
+  const SHARE_URL="https://coolcatch.github.io/Coolcatch-slide-puzzle/";
+  function dateStr(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function puzzleNumber(){ const today=new Date(); return Math.floor((today-new Date(today.getFullYear(),0,0))/86400000); }
+  function getStreak(){ try{ return parseInt(localStorage.getItem("mt-streak")||"0",10)||0; }catch(e){ return 0; } }
+  function updateStreak(){
+    // Only counts when solving today's daily puzzle; one increment per day
+    let streak=getStreak();
+    try{
+      const last=localStorage.getItem("mt-lastwin");
+      const today=dateStr(new Date()), yest=dateStr(new Date(Date.now()-86400000));
+      if(last!==today){
+        streak=(last===yest)?streak+1:1;
+        localStorage.setItem("mt-streak",String(streak));
+        localStorage.setItem("mt-lastwin",today);
+      }
+    }catch(e){}
+    return streak;
+  }
+  function updateBest(){
+    // Returns true if a previous record was beaten
+    try{
+      const key="mt-best-"+GRID+"-"+currentArtwork.id;
+      const prev=JSON.parse(localStorage.getItem(key)||"null");
+      const better=!prev||moves<prev.moves||(moves===prev.moves&&seconds<prev.seconds);
+      if(better) localStorage.setItem(key,JSON.stringify({moves:moves,seconds:seconds}));
+      return better&&!!prev;
+    }catch(e){ return false; }
+  }
   function onWin() {
     gameActive=false; stopTimer();
     const m=Math.floor(seconds/60),s=seconds%60,timeStr=m+":"+s.toString().padStart(2,"0");
     $("#win-img").src=currentArtwork.image;
     $("#win-stats").textContent="Solved in "+moves+" moves \u2022 "+timeStr;
     $("#win-art-info").textContent=currentArtwork.title+" by "+currentArtwork.artist;
+    const isDaily=currentArtwork.id===getArtworkOfTheDay().id;
+    const streak=isDaily?updateStreak():getStreak();
+    $("#win-streak").textContent="\ud83d\udd25 "+streak+"-day streak";
+    $("#win-streak").classList.toggle("hidden",!isDaily||streak<1);
+    $("#win-best").classList.toggle("hidden",!updateBest());
+    const shareBtn=$("#btn-share"); shareBtn.textContent="Share Result";
     $("#win-overlay").classList.remove("hidden");
+  }
+  async function shareResult(){
+    const m=Math.floor(seconds/60),s=seconds%60;
+    const isDaily=currentArtwork.id===getArtworkOfTheDay().id;
+    const streak=getStreak();
+    let text="MuseumTiles"+(isDaily?" #"+puzzleNumber():"")+" \u2014 "+currentArtwork.title+"\n"
+      +GRID+"\u00d7"+GRID+" \u00b7 "+moves+" moves \u00b7 "+m+":"+String(s).padStart(2,"0");
+    if(isDaily&&streak>1) text+=" \u00b7 \ud83d\udd25 "+streak+"-day streak";
+    text+="\n"+SHARE_URL;
+    if(navigator.share){ try{ await navigator.share({text:text}); return; }catch(e){ if(e.name==="AbortError") return; } }
+    try{
+      await navigator.clipboard.writeText(text);
+      const btn=$("#btn-share"); btn.textContent="Copied!";
+      setTimeout(()=>{btn.textContent="Share Result";},1500);
+    }catch(e){}
   }
   function bindEvents() {
     $("#btn-gallery-back").onclick=()=>showScreen(screenHome);
@@ -593,11 +668,10 @@ const TOURS = [
     $("#btn-hint").onclick=()=>{
       if(!gameActive) return;
       const solved=solvedState();
-      const allTiles=document.querySelectorAll(".puzzle-tile");
-      allTiles.forEach((el,i)=>{
-        if(tiles[i]!==0 && tiles[i]===solved[i]) el.classList.add("correct");
+      tiles.forEach((tileNum,i)=>{
+        if(tileNum!==0 && tileNum===solved[i]) tileEls[tileNum].classList.add("correct");
       });
-      setTimeout(()=>allTiles.forEach(el=>el.classList.remove("correct")),2000);
+      setTimeout(()=>Object.values(tileEls).forEach(el=>el.classList.remove("correct")),2000);
     };
     // Peek: hold to see full image
     const peekEl=$("#peek-overlay");
@@ -608,6 +682,7 @@ const TOURS = [
     $("#btn-peek").addEventListener("mouseleave",stopPeek);
     $("#btn-peek").addEventListener("touchstart",(e)=>{e.preventDefault();startPeek();});
     $("#btn-peek").addEventListener("touchend",stopPeek);
+    $("#btn-share").onclick=shareResult;
     $("#btn-win-home").onclick=()=>showScreen(screenHome);
     $("#btn-win-next").onclick=()=>{const ci=ARTWORKS.findIndex(a=>a.id===currentArtwork.id);startGame(ARTWORKS[(ci+1)%ARTWORKS.length]);};
   }
