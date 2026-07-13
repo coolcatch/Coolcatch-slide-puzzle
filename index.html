@@ -161,6 +161,16 @@ body {
 .puzzle-tile:hover { transform: scale(0.96); }
 .puzzle-tile.empty { background: transparent !important; cursor: default; }
 .puzzle-tile.empty:hover { transform: none; }
+.size-toggle-row { display: flex; justify-content: center; margin-bottom: 12px; }
+.size-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.size-btn {
+  padding: 8px 20px; background: transparent; border: none; color: var(--text-muted);
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.size-btn + .size-btn { border-left: 1px solid var(--border); }
+.size-btn.active { background: var(--accent); color: #111; font-weight: 600; }
+.size-btn:not(.active):hover { color: var(--text); }
 .game-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 12px; }
 .stat { text-align: center; }
 .stat-label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
@@ -312,6 +322,12 @@ body {
           <div class="peek-overlay" id="peek-overlay"></div>
         </div>
       </div>
+      <div class="size-toggle-row">
+        <div class="size-toggle" role="group" aria-label="Puzzle size">
+          <button class="size-btn" id="btn-grid-3">Easy 3&times;3</button>
+          <button class="size-btn active" id="btn-grid-4">Classic 4&times;4</button>
+        </div>
+      </div>
       <div class="game-stats">
         <div class="stat"><span class="stat-label">Moves</span><span class="stat-value" id="stat-moves">0</span></div>
         <div class="stat"><span class="stat-label">Time</span><span class="stat-value" id="stat-time">0:00</span></div>
@@ -391,8 +407,9 @@ const TOURS = [
 // ============================================================
 (function () {
   "use strict";
-  const GRID = 4;
-  const TOTAL = GRID * GRID;
+  let GRID = 4;
+  let TOTAL = GRID * GRID;
+  try { const saved = parseInt(localStorage.getItem("museumtiles-grid"), 10); if (saved === 3 || saved === 4) { GRID = saved; TOTAL = GRID * GRID; } } catch (e) {}
   let currentArtwork = null;
   let tiles = [];
   let moves = 0;
@@ -485,10 +502,12 @@ const TOURS = [
   function canMove(idx) { const e=emptyPos(),r=Math.floor(idx/GRID),c=idx%GRID; return (r===e.row&&Math.abs(c-e.col)===1)||(c===e.col&&Math.abs(r-e.row)===1); }
   function moveTile(idx) { if(!canMove(idx)) return false; const e=emptyPos(); [tiles[idx],tiles[e.idx]]=[tiles[e.idx],tiles[idx]]; return true; }
   function countInversions(arr) { let inv=0; for(let i=0;i<arr.length;i++) for(let j=i+1;j<arr.length;j++) if(arr[i]&&arr[j]&&arr[i]>arr[j]) inv++; return inv; }
-  function isSolvable(arr) { const inv=countInversions(arr),emptyRow=Math.floor(arr.indexOf(0)/GRID),fromBottom=GRID-emptyRow; return (inv%2===0)===(fromBottom%2===1); }
+  function isSolvable(arr) { const inv=countInversions(arr); if(GRID%2===1) return inv%2===0; const emptyRow=Math.floor(arr.indexOf(0)/GRID),fromBottom=GRID-emptyRow; return (inv%2===0)===(fromBottom%2===1); }
   function shuffleTiles() { do { tiles=solvedState(); for(let i=tiles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [tiles[i],tiles[j]]=[tiles[j],tiles[i]]; } } while(!isSolvable(tiles)||isSolved()); }
   function renderBoard() {
     const board=$("#puzzle-board"); board.innerHTML="";
+    board.style.gridTemplateColumns="repeat("+GRID+", 1fr)";
+    board.style.gridTemplateRows="repeat("+GRID+", 1fr)";
     const boardSize=board.offsetWidth||400;
     const tileSize=boardSize/GRID;
     const imgW=currentArtwork._natW||1,imgH=currentArtwork._natH||1;
@@ -509,6 +528,17 @@ const TOURS = [
       }
       board.appendChild(div);
     });
+  }
+  function syncSizeToggle() {
+    $("#btn-grid-3").classList.toggle("active", GRID===3);
+    $("#btn-grid-4").classList.toggle("active", GRID===4);
+  }
+  function setGridSize(n) {
+    if(n===GRID) return;
+    GRID=n; TOTAL=n*n;
+    try { localStorage.setItem("museumtiles-grid", String(n)); } catch(e) {}
+    syncSizeToggle();
+    if(currentArtwork){ shuffleTiles(); moves=0; $("#stat-moves").textContent="0"; renderBoard(); gameActive=true; startTimer(); }
   }
   function handleTileClick(idx) { if(!gameActive) return; if(moveTile(idx)){ moves++; $("#stat-moves").textContent=moves; renderBoard(); if(isSolved()) onWin(); } }
   function startTimer() { seconds=0; clearInterval(timerInterval); updateTimerDisplay(); timerInterval=setInterval(()=>{seconds++;updateTimerDisplay();},1000); }
@@ -556,6 +586,8 @@ const TOURS = [
     $("#btn-game-info").onclick=()=>$("#info-overlay").classList.remove("hidden");
     $("#btn-close-info").onclick=()=>$("#info-overlay").classList.add("hidden");
     $("#info-overlay").onclick=(e)=>{if(e.target===$("#info-overlay"))$("#info-overlay").classList.add("hidden");};
+    $("#btn-grid-3").onclick=()=>setGridSize(3);
+    $("#btn-grid-4").onclick=()=>setGridSize(4);
     $("#btn-shuffle").onclick=()=>{shuffleTiles();moves=0;$("#stat-moves").textContent="0";startTimer();gameActive=true;renderBoard();};
     // Hint: highlight tiles in correct position
     $("#btn-hint").onclick=()=>{
@@ -622,7 +654,7 @@ const TOURS = [
     };
   }
   document.addEventListener("error",function(e){if(e.target.tagName==="IMG")handleImgError(e.target);},true);
-  function init(){initHome();bindEvents();bindKeyboard();bindTouch();}
+  function init(){initHome();bindEvents();bindKeyboard();bindTouch();syncSizeToggle();}
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
 })();
 </script>
