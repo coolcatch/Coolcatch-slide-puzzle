@@ -748,18 +748,14 @@ const TOURS = [
   }
   function handleImgError(img) {
     if(img.dataset.fallback) return;
+    const rawSrc=img.getAttribute("src")||"";
+    if(!rawSrc) return;
     img.dataset.fallback="1";
-    // Try smaller thumbnail (400px) as fallback
-    const src=img.src;
-    if(src.includes("/800px-")){img.src=src.replace("/800px-","/400px-");return;}
-    // If still fails, show colored placeholder
-    img.onerror=function(){
-      this.style.display="none";
-      const p=document.createElement("div");
-      p.style.cssText="width:100%;aspect-ratio:1;background:linear-gradient(135deg,var(--surface),var(--bg-card));display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.8rem;text-align:center;padding:12px;";
-      p.textContent=this.alt||"Image unavailable";
-      this.parentNode.insertBefore(p,this);
-    };
+    img.style.display="none";
+    const p=document.createElement("div");
+    p.style.cssText="width:100%;aspect-ratio:1;background:linear-gradient(135deg,var(--surface),var(--bg-card));display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.8rem;text-align:center;padding:12px;";
+    p.textContent=img.alt||"Image unavailable";
+    img.parentNode.insertBefore(p,img);
   }
   document.addEventListener("error",function(e){if(e.target.tagName==="IMG")handleImgError(e.target);},true);
   function init(){initHome();bindEvents();bindKeyboard();bindTouch();syncSizeToggle();}
