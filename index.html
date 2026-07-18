@@ -176,6 +176,21 @@ body {
 .stat-value { font-size: 1.3rem; font-weight: 600; color: var(--accent); }
 .game-controls { display: flex; justify-content: center; gap: 12px; }
 .puzzle-tile.correct { box-shadow: inset 0 0 0 2px #4ade80, 0 0 8px rgba(74,222,128,0.3); }
+.tile-number {
+  position: absolute; top: 4px; left: 4px;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 4px; background: rgba(0,0,0,0.65);
+  color: var(--accent); font-family: var(--font-body);
+  font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.numbers-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);
+  cursor: pointer; user-select: none;
+}
+.numbers-toggle input { accent-color: var(--accent); cursor: pointer; }
 .peek-overlay {
   position: absolute; inset: 0; z-index: 10; border-radius: var(--radius-sm);
   background-size: cover; background-position: center; opacity: 0;
@@ -339,6 +354,9 @@ body {
         <button class="btn-secondary" id="btn-peek">Hold to Peek</button>
         <button class="btn-secondary" id="btn-shuffle">Shuffle</button>
       </div>
+      <label class="numbers-toggle" for="chk-numbers">
+        <input type="checkbox" id="chk-numbers"> Show numbers on tiles (helps you learn)
+      </label>
     </div>
     <div class="info-overlay hidden" id="info-overlay">
       <div class="info-panel">
@@ -415,6 +433,8 @@ const TOURS = [
   let GRID = 4;
   let TOTAL = GRID * GRID;
   try { const saved = parseInt(localStorage.getItem("museumtiles-grid"), 10); if (saved === 3 || saved === 4) { GRID = saved; TOTAL = GRID * GRID; } } catch (e) {}
+  let showNumbers = false;
+  try { showNumbers = localStorage.getItem("museumtiles-numbers") === "1"; } catch (e) {}
   let currentArtwork = null;
   let tiles = [];
   let moves = 0;
@@ -535,6 +555,10 @@ const TOURS = [
       div.style.backgroundImage="url('"+currentArtwork.image+"')";
       div.style.backgroundSize=m.bgW+"px "+m.bgH+"px";
       div.style.backgroundPosition=-(m.offX+srcCol*(m.tileSize+GAP))+"px "+-(m.offY+srcRow*(m.tileSize+GAP))+"px";
+      const label=document.createElement("span");
+      label.className="tile-number"; label.textContent=n;
+      if(!showNumbers) label.style.display="none";
+      div.appendChild(label);
       div.onclick=()=>handleTileClick(tiles.indexOf(n));
       tileEls[n]=div;
       board.appendChild(div);
@@ -664,6 +688,15 @@ const TOURS = [
     $("#btn-grid-3").onclick=()=>setGridSize(3);
     $("#btn-grid-4").onclick=()=>setGridSize(4);
     $("#btn-shuffle").onclick=()=>{shuffleTiles();moves=0;$("#stat-moves").textContent="0";startTimer();gameActive=true;renderBoard();};
+    $("#chk-numbers").checked=showNumbers;
+    $("#chk-numbers").onchange=(e)=>{
+      showNumbers=e.target.checked;
+      try{ localStorage.setItem("museumtiles-numbers", showNumbers?"1":"0"); }catch(e){}
+      for(const n in tileEls){
+        const lbl=tileEls[n].querySelector(".tile-number");
+        if(lbl) lbl.style.display=showNumbers?"":"none";
+      }
+    };
     // Hint: highlight tiles in correct position
     $("#btn-hint").onclick=()=>{
       if(!gameActive) return;
